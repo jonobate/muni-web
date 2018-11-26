@@ -6,7 +6,7 @@ def say_hello(username = "World"):
 
 # some bits of text for the page.
 header_text = '''
-    <html>\n<head> <title>EB Flask Test</title> </head>\n<body>'''
+    <html>\n<head> <title>EB Flask Test - Git Update Test</title> </head>\n<body>'''
 instructions = '''
     <p><em>Hint</em>: This is a RESTful web service! Append a username
     to the URL (for example: <code>/Thelonious</code>) to say hello to
