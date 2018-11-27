@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Dude, Where's My Bus?</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="static/home.css" />
+<link rel="shortcut icon" href="#" />
+</head>
+<body>
+
+<div class="header">
+  <h2>Dude, Where's My Bus?</h2>
+  <div id="controls">
+    <label>Route: </label>
+    <select id="route">
+      <option value="None">Select Route</option>
+      {% for route in routes %}
+      <option value={{ route.value }}>{{ route.label }}</option>
+      {% endfor %}
+    </select></br>
+
+    <label>Direction: </label>
+    <select id="direction">
+      <option value="None">Select Direction</option>
+      <option value="1">Inbound</option>
+      <option value="0">Outbound</option>
+    </select></br>
+
+    <label>Departure Stop: </label>
+    <select id="departure">
+      <option value="None">Select Departure Stop</option>
+    </select></br>
+
+    <label>Arrival Stop: </label>
+    <select id="arrival">
+      <option value="None">Select Arrival Stop</option>
+    </select></br>
+
+    <label>Arrival Date/Time: </label>
+    <input type="date" id="date" name="trip-start"
+       value="2018-11-29"
+       min="2018-01-01" max="2019-12-31">
+    <input type="time" value="09:00" id="time" name="trip-time"
+       min="0:00" max="23:59" required>
+
+     <div id="predict-button">
+       <div>
+         <button id="predict">Do the thing</button>
+       </div>
+     </div>
+</div>
+</div>
+
+<div class="row">
+  <div class="column side" style="background-color:#aaa;">Column</div>
+  <div class="column middle" style="background-color:#bbb;">
+    <div id='distribution'></div>
+  </div>
+  <div class="column side" style="background-color:#ccc;">Column</div>
+</div>
+
+<div class="footer">
+  <p>Footer</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/1.35.2/plotly.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="static/home.js"></script>
+
+</body>
+</html>

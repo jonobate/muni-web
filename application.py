@@ -1,33 +1,136 @@
-from flask import Flask
+from flask import Flask,render_template, request,jsonify,Response
+import pickle
+import numpy as np
+import pandas as pd
+import urllib
+from sklearn.ensemble import RandomForestRegressor
+import scipy.stats as st
 
-# print a nice greeting.
-def say_hello(username = "World"):
-    return '<p>Hello %s!</p>\n' % username
+def create_features(df):
+    #PROCESS INPUT DATA
+    #Convert timestamps
+    df['departure_time_hour'] = pd.to_datetime(df['departure_time_hour'])
 
-# some bits of text for the page.
-header_text = '''
-    <html>\n<head> <title>EB Flask Test - Git Update Test</title> </head>\n<body>'''
-instructions = '''
-    <p><em>Hint</em>: This is a RESTful web service! Append a username
-    to the URL (for example: <code>/Thelonious</code>) to say hello to
-    someone specific.</p>\n'''
-home_link = '<p><a href="/">Back</a></p>\n'
-footer_text = '</body>\n</html>'
+    #Re-localize time
+    df['departure_time_hour'] = df['departure_time_hour'].dt.tz_localize('utc').dt.tz_convert('US/Pacific')
+
+    #Generate local day of week and hour features
+    df['dow'] = df['departure_time_hour'].dt.dayofweek
+    df['hour'] = df['departure_time_hour'].dt.hour
+
+    #ADD STOP METADATA
+    #Append stop metadata
+    df_dep = df_stops.copy()
+    df_dep = df_dep.add_suffix('_dep')
+
+    df_arr = df_stops.copy()
+    df_arr = df_arr.add_suffix('_arr')
+
+    df = df.merge(df_dep, left_on='departure_stop_id', right_on='stop_code_dep')
+    df = df.merge(df_arr, left_on='arrival_stop_id', right_on='stop_code_arr')
+
+    df = df.drop(['stop_id_dep', 'stop_id_arr', 'stop_code_dep', 'stop_code_arr'], axis=1)
+
+    #Calculate stop distances
+    df['stop_lat_dist'] = (df['stop_lat_dep'] - df['stop_lat_arr'])
+    df['stop_lon_dist'] = (df['stop_lon_dep'] - df['stop_lon_arr'])
+    df['stop_dist'] = np.sqrt((df['stop_lat_dist']**2) + (df['stop_lon_dist']**2))
+
+    #Drop null columns, drop string/datetime columns
+    df = df.dropna(axis='columns', how='all')
+    df = df.drop(df.select_dtypes(['object', 'datetime64[ns, US/Pacific]']), axis=1)
+
+    df = df.fillna(0)
+
+    #Reset index
+    df = df.reset_index(drop=True)
+    return df
+
 
 # EB looks for an 'application' callable by default.
 application = Flask(__name__)
 
-# add a rule for the index page.
-application.add_url_rule('/', 'index', (lambda: header_text +
-    say_hello() + instructions + footer_text))
+@application.route('/', methods = ['GET'])
+def home():
+    return render_template('home.html', routes=route_dict)
 
-# add a rule when the page is accessed with a name appended to the site
-# URL.
-application.add_url_rule('/<username>', 'hello', (lambda username:
-    header_text + say_hello(username) + home_link + footer_text))
+@application.route('/stops', methods=['POST'])
+def get_stops():
+    req = request.get_json()
+    df_routes_dirs_stops
+    df_temp = df_routes_dirs_stops[(df_routes_dirs_stops['route_id'] == int(req['selectedRoute']))
+                        & (df_routes_dirs_stops['direction_id'] == int(req['selectedDirection']))]
+
+    stop_dict = [{'value': row['stop_code'],
+                    'label': row['stop_name']} for i, row in df_temp.iterrows()]
+
+    return jsonify(stop_dict)
+
+@application.route('/predict', methods=['POST'])
+def predict():
+
+    req = request.get_json()
+
+    cols = ['departure_time_hour','departure_stop_id','arrival_stop_id']
+
+    #This example is Castro to Montgomery, all lines
+    data = [[req['selectedDate'], int(req['selectedDeparture']), int(req['selectedArrival'])]]
+
+    df_test = pd.DataFrame(data, columns=cols)
+
+    X_mean = create_features(df_test)
+
+    #Predict means from clf_mean model and add back into test data
+    y_mean_pred = pd.DataFrame(clf_mean.predict(X_mean), columns=['mean'])
+    X_shape = X_mean.merge(y_mean_pred, left_index=True, right_index=True)
+
+    #Predict means from clf_mean model and add back into test data
+    y_shape_pred = pd.DataFrame(clf_shape.predict(X_shape), columns=['shape'])
+
+    df_test = df_test.merge(y_mean_pred, left_index=True, right_index=True)
+    df_test = df_test.merge(y_shape_pred, left_index=True, right_index=True)
+
+    dist = st.gamma
+
+    shape = df_test['shape']
+    mean = df_test['mean']
+
+    arg = (float(shape),)
+    loc = 0
+    scale = float(mean)/float(shape)
+
+    # Get sane start and end points of distribution
+    start = dist.ppf(0.01, *arg, loc=loc, scale=scale)
+    end = dist.ppf(0.99, *arg, loc=loc, scale=scale)
+    p95 = dist.ppf(0.95, *arg, loc=loc, scale=scale)
+
+    # Build PDF and turn into pandas Series
+    x = np.linspace(start, end, 10000)
+    y = dist.pdf(x, loc=loc, scale=scale, *arg)
+
+    data = list(zip(x, y))
+    return jsonify(data)
 
 # run the app.
 if __name__ == "__main__":
+    #Load some stuff
+    #with urllib.request.urlopen('https://s3.amazonaws.com/jonobate-bucket/clf_mean_final.pickle') as response:
+    #    clf_mean = pickle.load(open(response.read(), 'rb'))
+
+    #with urllib.request.urlopen('https://s3.amazonaws.com/jonobate-bucket/clf_shape_final.pickle') as response:
+    #    clf_shape = pickle.load(open(response.read(), 'rb'))
+
+    clf_mean = pickle.load(open('clf_mean_final.pickle', 'rb'))
+    clf_shape = pickle.load(open('clf_shape_final.pickle', 'rb'))
+
+    df_stops = pickle.load(open('df_stops.pickle', 'rb'))
+
+    df_routes = pickle.load(open('df_routes.pickle', 'rb'))
+    df_routes = df_routes.sort_values(by=['route_type', 'route_short_name'])
+    route_dict = [{'value': row['route_id'],
+                    'label': row['route_short_name'] + " - " + row['route_long_name']} for i, row in df_routes.iterrows()]
+
+    df_routes_dirs_stops = pickle.load(open('df_routes_dirs_stops.pickle', 'rb'))
     # Setting debug to True enables debug output. This line should be
     # removed before deploying a production app.
     application.debug = True
