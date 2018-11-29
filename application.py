@@ -69,7 +69,6 @@ def home():
 @application.route('/stops', methods=['POST'])
 def get_stops():
     req = request.get_json()
-    df_routes_dirs_stops
     df_temp = df_routes_dirs_stops[(df_routes_dirs_stops['route_id'] == int(req['selectedRoute']))
                         & (df_routes_dirs_stops['direction_id'] == int(req['selectedDirection']))]
 
@@ -137,12 +136,14 @@ if __name__ == "__main__":
     REMOTE = True
 
     if REMOTE:
+        print('Loading clf_mean from s3...')
         s3 = boto3.resource('s3')
         with BytesIO() as data:
             s3.Bucket("jonobate-bucket").download_fileobj("clf_mean_final.pickle", data)
             data.seek(0)    # move back to the beginning after writing
             clf_mean = pickle.load(data)
 
+        print('Loading clf_shape from s3...')
         with BytesIO() as data:
             s3.Bucket("jonobate-bucket").download_fileobj("clf_shape_final.pickle", data)
             data.seek(0)    # move back to the beginning after writing
@@ -161,6 +162,7 @@ if __name__ == "__main__":
     print('Loading stop data...')
     df_stops = pickle.load(open('df_stops.pickle', 'rb'))
     df_routes = pickle.load(open('df_routes.pickle', 'rb'))
+    df_routes_dirs_stops = pickle.load(open('df_routes_dirs_stops.pickle', 'rb'))
     df_routes = df_routes.sort_values(by=['route_type', 'route_short_name'])
     route_dict = [{'value': row['route_id'],
                     'label': row['route_short_name'] + " - " + row['route_long_name']} for i, row in df_routes.iterrows()]
