@@ -140,11 +140,11 @@ if __name__ == "__main__":
 
         #Load some stuff
         print('Loading clf_mean from s3...')
-        obj = client.get_object(Bucket='elasticbeanstalk-us-east-1-614550856824', Key='clf_mean_final.pickle')
+        obj = client.get_object(Bucket='jonobate-bucket', Key='clf_mean_final.pickle')
         clf_mean = pickle.load(open('clf_mean_final.pickle', 'rb'))
 
         print('Loading clf_shape from s3...')
-        obj = client.get_object(Bucket='elasticbeanstalk-us-east-1-614550856824', Key='clf_shape_final.pickle')
+        obj = client.get_object(Bucket='jonobate-bucket', Key='clf_shape_final.pickle')
 
     else:
         print('Loading clf_mean...')
@@ -153,6 +153,9 @@ if __name__ == "__main__":
         print('Loading clf_shape...')
         clf_shape = pickle.load(open('clf_shape_final.pickle', 'rb'))
 
+        #Debug when running locally only
+        application.debug = True
+
     print('Loading stop data...')
     df_stops = pickle.load(open('df_stops.pickle', 'rb'))
     df_routes = pickle.load(open('df_routes.pickle', 'rb'))
@@ -160,7 +163,4 @@ if __name__ == "__main__":
     route_dict = [{'value': row['route_id'],
                     'label': row['route_short_name'] + " - " + row['route_long_name']} for i, row in df_routes.iterrows()]
 
-    # Setting debug to True enables debug output. This line should be
-    # removed before deploying a production app.
-    application.debug = True
     application.run()
