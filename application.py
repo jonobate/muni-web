@@ -6,6 +6,7 @@ from sklearn.ensemble import RandomForestRegressor
 import scipy.stats as st
 import datetime
 import boto3
+from io import BytesIO
 
 def create_features(df):
     #PROCESS INPUT DATA
@@ -136,22 +137,23 @@ if __name__ == "__main__":
     REMOTE = True
 
     if REMOTE:
-        client = boto3.client('s3') #low-level functional API
+        s3 = boto3.resource('s3')
+        with BytesIO() as data:
+            s3.Bucket("jonobate-bucket").download_fileobj("clf_mean_final.pickle", data)
+            data.seek(0)    # move back to the beginning after writing
+            clf_mean = pickle.load(data)
 
-        #Load some stuff
-        print('Loading clf_mean from s3...')
-        obj = client.get_object(Bucket='jonobate-bucket', Key='clf_mean_final.pickle')
-        clf_mean = pickle.load(open('clf_mean_final.pickle', 'rb'))
-
-        print('Loading clf_shape from s3...')
-        obj = client.get_object(Bucket='jonobate-bucket', Key='clf_shape_final.pickle')
+        with BytesIO() as data:
+            s3.Bucket("jonobate-bucket").download_fileobj("clf_shape_final.pickle", data)
+            data.seek(0)    # move back to the beginning after writing
+            clf_shape = pickle.load(data)
 
     else:
         print('Loading clf_mean...')
-        clf_mean = pickle.load(open('clf_mean_final.pickle', 'rb'))
+        clf_mean = pickle.load(open('clf_mean_final_local.pickle', 'rb'))
 
         print('Loading clf_shape...')
-        clf_shape = pickle.load(open('clf_shape_final.pickle', 'rb'))
+        clf_shape = pickle.load(open('clf_shape_final_local.pickle', 'rb'))
 
         #Debug when running locally only
         application.debug = True
