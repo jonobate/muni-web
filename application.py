@@ -133,31 +133,11 @@ def predict():
 # run the app.
 if __name__ == "__main__":
 
-    REMOTE = True
+    print('Loading clf_mean...')
+    clf_mean = pickle.load(open('clf_mean_final.pickle', 'rb'))
 
-    if REMOTE:
-        print('Loading clf_mean from s3...')
-        s3 = boto3.resource('s3')
-        with BytesIO() as data:
-            s3.Bucket("jonobate-bucket").download_fileobj("clf_mean_final.pickle", data)
-            data.seek(0)    # move back to the beginning after writing
-            clf_mean = pickle.load(data)
-
-        print('Loading clf_shape from s3...')
-        with BytesIO() as data:
-            s3.Bucket("jonobate-bucket").download_fileobj("clf_shape_final.pickle", data)
-            data.seek(0)    # move back to the beginning after writing
-            clf_shape = pickle.load(data)
-
-    else:
-        print('Loading clf_mean...')
-        clf_mean = pickle.load(open('clf_mean_final_local.pickle', 'rb'))
-
-        print('Loading clf_shape...')
-        clf_shape = pickle.load(open('clf_shape_final_local.pickle', 'rb'))
-
-        #Debug when running locally only
-        application.debug = True
+    print('Loading clf_shape...')
+    clf_shape = pickle.load(open('clf_shape_final.pickle', 'rb'))
 
     print('Loading stop data...')
     df_stops = pickle.load(open('df_stops.pickle', 'rb'))
@@ -167,4 +147,5 @@ if __name__ == "__main__":
     route_dict = [{'value': row['route_id'],
                     'label': row['route_short_name'] + " - " + row['route_long_name']} for i, row in df_routes.iterrows()]
 
+    application.debug = True
     application.run()
