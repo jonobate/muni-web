@@ -4,11 +4,11 @@
 
 body {
     font-family: Arial, Helvetica, sans-serif;
+    background-color: #f1f1f1;
 }
 
 /* Style the header */
 .header {
-    background-color: #f1f1f1;
     padding: 30px;
     text-align: center;
     font-size: 35px;
@@ -37,6 +37,12 @@ select, input, button {
     width: 50%;
 }
 
+
+.row {
+  text-align: center;
+  font-size: 25px;
+}
+
 /* Clear floats after the columns */
 .row:after {
     content: "";
@@ -56,4 +62,9 @@ select, input, button {
     .column.side, .column.middle {
         width: 100%;
     }
+}
+
+#distribution {
+  width: 50%;
+  margin: 0 auto;
 }

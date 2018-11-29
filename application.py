@@ -2,9 +2,10 @@ from flask import Flask,render_template, request,jsonify,Response
 import pickle
 import numpy as np
 import pandas as pd
-import urllib
 from sklearn.ensemble import RandomForestRegressor
 import scipy.stats as st
+import datetime
+import boto3
 
 def create_features(df):
     #PROCESS INPUT DATA
@@ -17,6 +18,16 @@ def create_features(df):
     #Generate local day of week and hour features
     df['dow'] = df['departure_time_hour'].dt.dayofweek
     df['hour'] = df['departure_time_hour'].dt.hour
+    df['date'] = df['departure_time_hour'].dt.date
+
+    #Set service IDs
+    df['service_id'] = 1
+    df['service_id'][df['dow'] == 5] = 2
+    df['service_id'][df['dow'] == 6] = 3
+    df['service_id'][df['date'] == datetime.date(2018, 11, 22)] = 3
+    df['service_id'][df['date'] == datetime.date(2018, 11, 23)] = 3
+
+    df = df.drop(['date'], axis=1)
 
     #ADD STOP METADATA
     #Append stop metadata
@@ -75,6 +86,7 @@ def predict():
 
     #This example is Castro to Montgomery, all lines
     data = [[req['selectedDate'], int(req['selectedDeparture']), int(req['selectedArrival'])]]
+    #data = [['2018-11-21 08:00-08:00', 15728, 15731]]
 
     df_test = pd.DataFrame(data, columns=cols)
 
@@ -102,35 +114,52 @@ def predict():
     # Get sane start and end points of distribution
     start = dist.ppf(0.01, *arg, loc=loc, scale=scale)
     end = dist.ppf(0.99, *arg, loc=loc, scale=scale)
-    p95 = dist.ppf(0.95, *arg, loc=loc, scale=scale)
+
+    #Get p50, p99
+    p50 = round(dist.ppf(0.50, *arg, loc=loc, scale=scale)/60)
+
+    p95 = round(dist.ppf(0.95, *arg, loc=loc, scale=scale)/60)
 
     # Build PDF and turn into pandas Series
     x = np.linspace(start, end, 10000)
     y = dist.pdf(x, loc=loc, scale=scale, *arg)
 
+    #Convert seconds to minutes
+    x = x/60
+
     data = list(zip(x, y))
-    return jsonify(data)
+    return jsonify({'data':data, 'p50':p50, 'p95':p95})
 
 # run the app.
 if __name__ == "__main__":
-    #Load some stuff
-    #with urllib.request.urlopen('https://s3.amazonaws.com/jonobate-bucket/clf_mean_final.pickle') as response:
-    #    clf_mean = pickle.load(open(response.read(), 'rb'))
 
-    #with urllib.request.urlopen('https://s3.amazonaws.com/jonobate-bucket/clf_shape_final.pickle') as response:
-    #    clf_shape = pickle.load(open(response.read(), 'rb'))
+    REMOTE = True
 
-    clf_mean = pickle.load(open('clf_mean_final.pickle', 'rb'))
-    clf_shape = pickle.load(open('clf_shape_final.pickle', 'rb'))
+    if REMOTE:
+        client = boto3.client('s3') #low-level functional API
 
+        #Load some stuff
+        print('Loading clf_mean from s3...')
+        obj = client.get_object(Bucket='elasticbeanstalk-us-east-1-614550856824', Key='clf_mean_final.pickle')
+        clf_mean = pickle.load(open('clf_mean_final.pickle', 'rb'))
+
+        print('Loading clf_shape from s3...')
+        obj = client.get_object(Bucket='elasticbeanstalk-us-east-1-614550856824', Key='clf_shape_final.pickle')
+
+    else:
+        print('Loading clf_mean...')
+        clf_mean = pickle.load(open('clf_mean_final.pickle', 'rb'))
+
+        print('Loading clf_shape...')
+        clf_shape = pickle.load(open('clf_shape_final.pickle', 'rb'))
+
+    print('Loading stop data...')
     df_stops = pickle.load(open('df_stops.pickle', 'rb'))
-
     df_routes = pickle.load(open('df_routes.pickle', 'rb'))
     df_routes = df_routes.sort_values(by=['route_type', 'route_short_name'])
     route_dict = [{'value': row['route_id'],
                     'label': row['route_short_name'] + " - " + row['route_long_name']} for i, row in df_routes.iterrows()]
 
-    df_routes_dirs_stops = pickle.load(open('df_routes_dirs_stops.pickle', 'rb'))
     # Setting debug to True enables debug output. This line should be
     # removed before deploying a production app.
     application.debug = True
