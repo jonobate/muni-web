@@ -58,6 +58,20 @@ def create_features(df):
     df = df.reset_index(drop=True)
     return df
 
+#STARTUP CODE
+print('Loading clf_mean...')
+clf_mean = pickle.load(open('clf_mean_final.pickle', 'rb'))
+
+print('Loading clf_shape...')
+clf_shape = pickle.load(open('clf_shape_final.pickle', 'rb'))
+
+print('Loading stop data...')
+df_stops = pickle.load(open('df_stops.pickle', 'rb'))
+df_routes = pickle.load(open('df_routes.pickle', 'rb'))
+df_routes_dirs_stops = pickle.load(open('df_routes_dirs_stops.pickle', 'rb'))
+df_routes = df_routes.sort_values(by=['route_type', 'route_short_name'])
+route_dict = [{'value': row['route_id'],
+                'label': row['route_short_name'] + " - " + row['route_long_name']} for i, row in df_routes.iterrows()]
 
 # EB looks for an 'application' callable by default.
 application = Flask(__name__)
@@ -132,20 +146,5 @@ def predict():
 
 # run the app.
 if __name__ == "__main__":
-
-    print('Loading clf_mean...')
-    clf_mean = pickle.load(open('clf_mean_final.pickle', 'rb'))
-
-    print('Loading clf_shape...')
-    clf_shape = pickle.load(open('clf_shape_final.pickle', 'rb'))
-
-    print('Loading stop data...')
-    df_stops = pickle.load(open('df_stops.pickle', 'rb'))
-    df_routes = pickle.load(open('df_routes.pickle', 'rb'))
-    df_routes_dirs_stops = pickle.load(open('df_routes_dirs_stops.pickle', 'rb'))
-    df_routes = df_routes.sort_values(by=['route_type', 'route_short_name'])
-    route_dict = [{'value': row['route_id'],
-                    'label': row['route_short_name'] + " - " + row['route_long_name']} for i, row in df_routes.iterrows()]
-
     application.debug = True
     application.run()

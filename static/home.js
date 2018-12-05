@@ -151,7 +151,15 @@ $(document).ready(function() {
         width: 600,
         height: 400
       }
-      document.getElementById("waiting").innerHTML="";
+      //document.getElementById("waiting").innerHTML="";
+      //Calculate departure time
+      var dep_time = (parseInt(selectedTime[0])*60 + parseInt(selectedTime[1])) - p95;
+      if (dep_time < 0) {
+        dep_time = dep_time + 24*60;
+      }
+      var dep_hour = Math.floor(dep_time/60);
+      var dep_mins = dep_time - (dep_hour*60);
+      document.getElementById("waiting").innerHTML='<font color="red">Be at departure stop by ' + dep_hour + ':' + dep_mins + '</font>';
       Plotly.plot($('#distribution')[0], trace1, layout)
     } else {
       document.getElementById("waiting").innerHTML='<font color="red">Please select options above</font>';
